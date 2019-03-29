@@ -7,11 +7,11 @@
 In this tutorial series we will take an existing CRUD application called Bookstore and slowly migrate it to Vaadin 10 using MPR one step at a time.
 
 You can browse the application in various steps of development here: + 
-http://petri.app.fi/v7migr-orig +
-http://petri.app.fi/v7migr-mpr +
-http://petri.app.fi/v7migr-hybrid1 + 
-http://petri.app.fi/v7migr-hybrid2 + 
-http://petri.app.fi/v7migr-v10final + 
+http://petri2.app.fi/v7migr-orig +
+http://petri2.app.fi/v7migr-mpr +
+http://petri2.app.fi/v7migr-hybrid1 + 
+http://petri2.app.fi/v7migr-hybrid2 + 
+http://petri2.app.fi/v7migr-v10final + 
 
 And the code is available here: + 
 http://TODO_ADD_LINK_TO_PUBLIC_REPO
@@ -624,7 +624,7 @@ our production war will be available in the bookstore-production/target folder. 
 Servlet 3.0 compatible server like Tomcat, Jetty etc.
 
 You can view the MPR version of the Vaadin 7 application here: + 
-http://petri.app.fi/v7migr-mpr +
+http://petri2.app.fi/v7migr-mpr +
 
 ----
 Once you're done testing, remember to remove the stray button from the main layout.

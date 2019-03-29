@@ -924,6 +924,9 @@ image::NavV10Desk.jpeg[]
 
 We do notice that the Lumo theme has a bit of a more flat look and feel than the original theme. While we could make the theme match pixel perfectly with the original theme, we are not going to emphasize theming apart from the required functionality (responsive behavior).
 
+You can view the fisrt Hybrid version of the Vaadin 7 application here: + 
+http://petri2.app.fi/v7migr-hybrid1 +
+
 In the next section we'll take on the inventory view and start transitioning the Table to a Grid and later the FieldGroup to a Binder.
 
 
