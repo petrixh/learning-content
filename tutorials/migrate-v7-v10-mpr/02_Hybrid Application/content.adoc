@@ -1,0 +1,939 @@
+
+= Step 1 - Designer and Login View
+:tags: mpr, vaadin7
+:author: Petri Heinonen
+:title: Hybrid Application
+:description: Migrate parts of an Vaadin 7 application running inside MPR to Vaadin 10 while preserving 
+:imagesdir: ./images
+
+While migrating our hybrid application, we have to remember that
+while we can run Vaadin 7 content inside Vaadin 10 through the
+LegacyWrapper, we cannot add Vaadin 10 components inside our
+Vaadin 7 layout (nor should we as our goal is to migrate away from V7).
+
+Hence we'll have to migrate our application "top to bottom" starting from
+the root (which was previously the UI) and continuing downwards from there.
+
+The first obvious thing to migrate will be our login view. We decide to use
+the Vaadin Designer for this in order to speed things up for us.
+
+Vaadin 10 uses a "frontend" folder for any custom polymer templates. Think
+of this as the Vaadin 10 replacement for the "VAADIN" folder in V7 and V8.
+----
+Read more about the frontend folder here:
+https://vaadin.com/blog/vaadin-10-and-static-resources
+----
+In a WAR the frontend folder needs to go under "src/main/webapp/frontend"
+
+We can also create a shared-styles.html file for any styles that we want
+to share between components:
+
+src/main/webapp/frontend/styles/shared-styles.html
+
+[source, xml]
+....
+<!-- shared styles for all views -->
+<dom-module id="shared-styles">
+    <template>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+        </style>
+    </template>
+</dom-module>
+....
+
+and copy the images from the old theme to the new frontend/styles folder
+for later use.
+
+After creating the folder, we should locate our old LoginView.java under
+"bookstore/samples/authentication" package and create a new Vaadin 10
+(or Vaadin 11 depending on your designer version) design.
+Remember to check the "Create companion Java file" checkbox and give
+your template a suitable name, for instance "login-view". Once you click
+done, Vaadin Designer should create a Java-file and a HTML-file for you
+and open the designer view.
+
+src/main/java/com/example/bookstore/mpr/bookstore/samples/authentication/LoginView.java
+[source, java]
+....
+/**
+ * A Designer generated component for the login-view.html template.
+ *
+ * Designer will add and remove fields with @Id mappings but
+ * does not overwrite or otherwise change this file.
+ */
+@Tag("login-view")
+@HtmlImport("login-view.html")
+public class LoginView extends PolymerTemplate<LoginView.LoginViewModel> {
+
+    /**
+     * Creates a new LoginView.
+     */
+    public LoginView() {
+        // You can initialise any data required for the connected UI components here.
+    }
+
+    /**
+     * This model binds properties between LoginView and login-view.html
+     */
+    public interface LoginViewModel extends TemplateModel {
+        // Add setters and getters for template properties here.
+    }
+}
+....
+
+
+src/main/webapp/frontend/login-view.html
+....
+<link rel="import" href="bower_components/polymer/polymer.html">
+
+<dom-module id="login-view">
+    <template>
+        <style include="shared-styles">
+            :host {
+                display: block;
+            }
+        </style>
+
+    </template>
+
+    <script>
+        class LoginView extends Polymer.Element {
+            static get is() {
+                return 'login-view';
+            }
+
+            static get properties() {
+                return {
+                    // Declare your properties here.
+                };
+            }
+        }
+        customElements.define(LoginView.is, LoginView);
+    </script>
+</dom-module>
+....
+
+In order to replicate the old login view we can add a couple of divs, a form layout
+and buttons. In Vaadin 7 a CssLayout was essentially a Div that allowed us to
+use css to style it. Arguably there are many ways of building this login view,
+this is just one of them.
+
+[source, xml]
+....
+<div class="container">
+    <div id="lognScreen" class="login-screen" style="width: 100%; height: 100%;">
+        <vaadin-form-layout class="login-form">
+            <vaadin-form-item>
+                <label slot="label">Username</label>
+                <vaadin-text-field class="full-width" id="userNameField"
+                                   name="usernameField"></vaadin-text-field>
+            </vaadin-form-item>
+            <vaadin-form-item>
+                <label slot="label">Password</label>
+                <vaadin-password-field class="full-width" id="passwordField"
+                                       name="passwordField"></vaadin-password-field>
+            </vaadin-form-item>
+            <vaadin-form-item>
+                <vaadin-button theme="success primary" class="login-btn" id="loginButton">
+                    Login
+                </vaadin-button>
+                <vaadin-button theme="tertiary" property="" class="forgot-pswd-btn" id="forgotPswdButton">
+                    Forgot password?
+                </vaadin-button>
+            </vaadin-form-item>
+        </vaadin-form-layout>
+    </div>
+    <div id="loginInformation" class="login-information">
+        <div id="loginInfo">
+            <h1>Login Information</h1>Log in as "admin" to have full access. Log in with any
+            other username to have read-only access. For all users, any password is fine
+        </div>
+    </div>
+</div>
+....
+
+The "container" will contain the "centered form" and the login info components, this
+will allow us to add the responsive behavior that we observed before. The "login-screen"
+DIV is the once we'll use to center the form and it will be a flex box. The reason
+we decided to go with a designer approach chere is because we can theme it on the
+fly within a lightweight container and add the logic later.
+
+While theming isn't the primary concern for this migration, we'll still make a small
+effort to make the login view look and behave similarly to the original. The biggest
+visual differences to Vaadin 7 theming is the use of CSS 3 custom properties (a.k.a. "variables")
+that start with a double dash "--" and are used through
+----
+var(<prop-name>, <default-value>);
+----
+
+and the lack of SCSS features like selector nesting.
+
+[source, css]
+....
+<style include="shared-styles">
+            :host {
+                display: block;
+                width: 100%;
+                height: 100%;
+
+                /*--login-bg-image: url('styles/img/archetype-login-bg.jpg');*/
+                background: var(--login-bg-image, url('styles/img/archetype-login-bg.jpg')) var(--login-bg-color, #fff) 50% 50%;
+                background-size: cover;
+                min-height: 600px;
+            }
+
+            .container {
+                width: 100%;
+                height: 100%;
+                padding-left: var(--login-info-width, 300px);
+                position: relative;
+            }
+
+            .login-screen {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding-top: 60px;
+                padding-bottom: 60px;
+            }
+
+            .login-information {
+                line-height: 1.55;
+                font-family: var(--lumo-font-family, inherit);
+                padding: var(--lumo-space-m, 21px);
+                display: inline-block;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: var(--login-info-width, 300px);
+                height: 100%;
+                background-color: var(--login-info-bg, var(--lumo-primary-color-50pct, #3b3f42));
+                color: var(--login-info-color, #fff);
+
+                -webkit-animation: fadein 2s; /* Safari, Chrome and Opera > 12.1 */
+                -moz-animation: fadein 2s; /* Firefox < 16 */
+                -ms-animation: fadein 2s; /* Internet Explorer */
+                -o-animation: fadein 2s; /* Opera < 12.1 */
+                animation: fadein 2s;
+            }
+
+            .login-information h1 {
+                font-size: 2.4em;
+                margin-top: 1.4em;
+                margin-bottom: 1em;
+                letter-spacing: -0.03em;
+                line-height: 1.1;
+                font-weight: 300;
+            }
+
+            .login-form {
+                border-radius: var(--login-form-border-radius, 4px);
+                border: var(--login-form-border, none);
+                box-shadow: var(--login-form-box-shadow, 0 2px 3px rgba(0, 0, 0, 0.05));
+
+                background: none white;
+                width: auto;
+                display: inline-block;
+                max-width: 415px;
+                padding: var(--lumo-space-m, 21px);
+
+                -webkit-animation: fadein 0.5s; /* Safari, Chrome and Opera > 12.1 */
+                -moz-animation: fadein 0.5s; /* Firefox < 16 */
+                -ms-animation: fadein 0.5s; /* Internet Explorer */
+                -o-animation: fadein 0.5s; /* Opera < 12.1 */
+                animation: fadein 0.5s;
+
+            }
+
+            .login-form .forgot-pswd-btn {
+                float: right;
+            }
+
+            @media screen and (max-width: 800px) {
+
+                .container {
+                    padding-left: 0;
+                }
+
+                .login-information {
+                    top: unset;
+                    bottom: 0;
+                    right: 0;
+                    width: 100%;
+                    height: 200px;
+                    text-align: center;
+                }
+
+                .login-information h1 {
+                    margin-top: 0.4em;
+                }
+
+                .login-form {
+                    align-self: flex-start;
+                    max-width: 350px;
+                }
+
+                .login-form vaadin-form-item {
+                    display: block;
+                }
+
+                vaadin-form-item {
+                    --vaadin-form-item-label-width: 100%;
+                }
+
+                .login-form vaadin-form-item label {
+                    text-align: center;
+                    display: block;
+                    width: 100%;
+                }
+
+                vaadin-button {
+                    display: block;
+                    width: 100%;
+                }
+
+            }
+
+            @keyframes fadein {
+                0% {
+                    opacity: 0;
+                }
+                66% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+
+            /* Firefox < 16 */
+            @-moz-keyframes fadein {
+                0% {
+                    opacity: 0;
+                }
+                66% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+
+            /* Safari, Chrome and Opera > 12.1 */
+            @-webkit-keyframes fadein {
+                0% {
+                    opacity: 0;
+                }
+                66% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+
+            /* Internet Explorer */
+            @-ms-keyframes fadein {
+                0% {
+                    opacity: 0;
+                }
+                66% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+
+        </style>
+....
+
+While we were able to use the Vaadin designer to design the look
+and feel of our login view, we'll need to make our application use
+it as well. We add a check to the attach method that will check if
+the current user is authenticated or not, if not we'll redirect the
+user to the new login page, while an authorized user will be
+presented with the V7 application
+
+BookstoreMainLayout.java
+[source, java]
+....
+public class BookstoreMainLayout extends Div {
+
+    private LegacyWrapper legacyWrapper;
+
+    public BookstoreMainLayout() {
+        setSizeFull();
+
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        checkAuthAndShowLoginOrApp();
+    }
+
+    private void checkAuthAndShowLoginOrApp() {
+        if (BookstoreUI.get().getAccessControl().isUserSignedIn()) {
+            removeAll();
+
+
+            //Should not be needed after https://github.com/vaadin/multiplatform-runtime/issues/23 is fixed, will slow down resizing considerably
+            getUI().get().getPage().executeJavaScript("setTimeout(function() { window.addEventListener('resize', vaadin.forceLayout); }, 1000)");
+
+            LegacyWrapper legacyWrapper = new LegacyWrapper(BookstoreUI.get().getContentPanel());
+            legacyWrapper.addClassName("legacy-wrapper");
+            legacyWrapper.setSizeFull();
+            add(legacyWrapper);
+
+
+        } else {
+            showLogin();
+        }
+    }
+
+    private void showLogin() {
+        removeAll();
+
+        /*
+         * If we call navigator.navigateTo() before at least one LegacyWrapper has been initialized,
+         * Page.location will be null, hence this little workaround will allow us to switch
+         * to the real application views without incident. This should not be needed once
+         * https://github.com/vaadin/multiplatform-runtime/issues/26 is fixed.
+         */
+        LegacyWrapper initializer = new LegacyWrapper(new Label("I should not be visible..."));
+        initializer.setVisible(false);
+        add(initializer);
+
+        add(new LoginView());
+    }
+}
+....
+
+Next we need to add some logic to our login view so that we can test it out:
+
+[source, java]
+....
+@Tag("login-view")
+@HtmlImport("login-view.html")
+public class LoginView extends PolymerTemplate<LoginView.LoginViewModel> {
+
+    @Id("loginButton")
+    private Button loginButton;
+    @Id("forgotPswdButton")
+    private Button forgotPswdButton;
+    @Id("loginInfo")
+    private Element div;
+
+    private AccessControl accessControl;
+    private LoginScreen.LoginListener loginListener;
+    @Id("passwordField")
+    private PasswordField passwordField;
+    @Id("userNameField")
+    private TextField userNameField;
+
+    /**
+     * Creates a new LoginView.
+     */
+    protected LoginView() {
+        // You can initialise any data required for the connected UI components here.
+    }
+
+    public LoginView(AccessControl accessControl, LoginScreen.LoginListener loginListener) {
+        this();
+        this.accessControl = accessControl;
+        this.loginListener = loginListener;
+
+        userNameField.setValue("admin");
+
+        forgotPswdButton.addClickListener(e -> Notification.show("Hint: Try anything", 2000, Notification.Position.MIDDLE));
+        loginButton.addClickListener(e -> login());
+    }
+
+    protected void login() {
+        if (accessControl.signIn(userNameField.getValue(), passwordField.getValue())) {
+            loginListener.loginSuccessful();
+        } else {
+            Notification.show("Login failed \n" +
+                            "Please check your username and password and try again.", 2000,
+                    Notification.Position.MIDDLE);
+            userNameField.focus();
+        }
+
+    }
+    ...
+}
+....
+
+As you might have noticed, we created a new constructor and made the original (empty) constructor
+protected. This is to allow us to add the AccessControl object and login listeners
+to the view. By keeping the empty constructor we're also allowing future
+edits with Vaadin designer if we want to change it later.
+
+Now we'll add the missing arguments to our BookstoreMainLayout.java
+
+[source, java]
+....
+private void showLogin() {
+    removeAll();
+
+    ...
+
+    add(new LoginView(BookstoreUI.get().getAccessControl(), new LoginScreen.LoginListener() {
+        @Override
+        public void loginSuccessful() {
+            checkAuthAndShowLoginOrApp();
+            BookstoreUI.get().showMainView();
+        }
+    }));
+}
+....
+
+We should now be able to run our application and login through our new
+webcomponent based login view.
+
+image::LoginV7.jpeg[]
+Vaadin 7 Login
+
+image::LoginV10.jpeg[]
+Vaadin 10 Login
+
+----
+If the view looks weird, check the html imports in the designs, they should be:
+<link rel="import" href="bower_components/... >
+not:
+<link rel="import" href="../../../../../src/main/webapp/frontend/bower_components/... >
+or
+<link rel="import" href="../bower_components/... >
+----
+
+
+= Step 2 - Refactor application navigation and menus
+
+In this step, we're going to start slowly converting the Vaadin 7 application to Vaadin 10, step by step. We will
+start "top down", as we want to avoid the situation where we would need to add Vaadin 10 components within Vaadin 7
+components. We will therefore start by implementing the menu and navigation part of our application.
+
+image::Vaadin10ConvTarget.jpg[alt=Target for this step is to convert the navigation section with Vaadin 10 while keeping the application views as Vaadin 7.,width=1200,height=571,role=imgExpand]
+
+----
+Disclamer: We are trying to have a minimal impact on the existing code where possible, therefore we are going to replicate the existing menu structure with a similar structure instead of redesigning it. There are better ways of structuring and organizing your view hierarchy in Vaadin 10 then the following example will detail.
+----
+
+We will start by creating a new MenuDesign using the designer (remember to select the "Create Java Companion file" checkbox and verify that the files are created under the right module, the ui-module) and add the required components to the design. Essentially we'll add:
+
+ * a couple of DIVs at the top for eventual styling
+ * a HorizontalLayout for the header
+ * a Button for the mobile menu
+ * a DIV for the title
+ * a Button for logout
+ * a Vertical layout for the views (menu-items)
+
+[source,html]
+ ....
+ <!-- HTML imports omitted -->
+ <dom-module id="menu-design">
+     <template>
+        <style include="shared-styles">
+             :host {
+                 display: inline-block;
+             }
+        </style>
+            <div id="menuRoot" class="menu-root" style="height: 100%;">
+                <div id="menuPart" class="menu-part" style="height: 100%;">
+                    <vaadin-horizontal-layout id="menuHeader" class="menu-header"
+                           style="justify-content: center; align-items: center;">
+                        <vaadin-button style="height: 100%;"
+                                    theme="small tertiary primary"
+                                    class="menu-button menu-open-close-button" id="menuButton">
+                            <iron-icon icon="vaadin:menu" slot="prefix"></iron-icon>
+                         Menu
+                        </vaadin-button>
+                        <div id="title" class="menu-title" style="flex-grow: 1;">
+                            <iron-icon id="title-icon" icon="[[titleIcon]]"></iron-icon>
+                         [[titleString]]
+                        </div>
+                        <vaadin-button class="menu-button user-button" style="height: 100%;"
+                                             theme="small tertiary primary" id="userButton">
+                         Logout
+                        </vaadin-button>
+                    </vaadin-horizontal-layout>
+                    <vaadin-vertical-layout id="menuItems" class="menu-items" theme="">
+                        <vaadin-button>
+                         <!-- Just for styling, remove and populate from java -->
+                         A Placeholder
+                        </vaadin-button>
+                    </vaadin-vertical-layout>
+                </div>
+            </div>
+     </template>
+     <script>
+         class MenuDesign extends Polymer.Element {
+             static get is() {
+                 return 'menu-design';
+             }
+             static get properties() {
+                 return {
+                     titleString: {
+                         type: String,
+                         value: "Placeholder"
+                     },
+                     titleIcon: String
+                 };
+             }
+         }
+         customElements.define(MenuDesign.is, MenuDesign);
+     </script>
+ </dom-module>
+ ....
+
+We can make the new layout template include properties that we can set from the server side. This is done in the small bit of JavaScript at the bottom where we create two string properties (one with a default value we define, the other though the shorthand declaration). We can then use these properties in our template through [[ PROPERTY_NAME ]].
+
+We can also use the designer to theme most of the menu without running the application allowing us to test the styles much faster:
+
+[source,css]
+....
+<style include="shared-styles">
+    :host {
+        display: inline-block;
+        font-family: var(--lumo-font-family, inherit);
+        height: 100%;
+    }
+
+    .menu-header {
+        height: var(--menu-header-mobile-height, 32px);
+        background: var(--menu-header-bg, var(--lumo-primary-color-50pct, black));
+    }
+
+    .menu-items {
+        display: none;
+        min-width: 50px;
+        background: var(--menu-items-bg, var(--lumo-shade-80pct, black));
+        top: var(--menu-header-mobile-height, 32px);
+        height: calc(100% - var(--menu-header-mobile-height, 32px));
+        width: auto;
+        min-width: 64px;
+        max-width: 100vw;
+    }
+
+    .menu-items vaadin-button {
+        --lumo-primary-text-color: #fff;
+        min-width: 100%;
+        --lumo-border-radius: 0;
+        padding: 0 var(--lumo-space-m, 12px);
+        margin: 0;
+    }
+
+    .menu-items vaadin-button.selected {
+        --lumo-contrast-5pct: var(--lumo-shade, black);
+        --lumo-primary-text-color: var(--lumo-base-color, #fff);
+    }
+
+    .menu-button {
+        margin: 0;
+    }
+
+    .menu-open-close-button {
+
+    }
+
+    .menu-title {
+        color: var(--lumo-base-color, #fff);
+        text-align: center;
+    }
+
+    .menu-title iron-icon{
+        width: 16px;
+        padding-bottom: 2px;
+    }
+
+    /* For DOM api based approach, add spacing between icon and text */
+    .menu-title span{
+        padding-left: 4px;
+    }
+
+    /* Skipping separate tablet and mobile mode in tutorial,
+           will switch directly to mobile from desktop
+    @media screen and (min-width: 500px) {
+
+    } */
+
+    /* Mobile only */
+    @media screen and (max-width: 799px) {
+        .menu-items {
+            display: none;
+        }
+
+        .menu-header {
+            position: fixed;
+            top: 0;
+            z-index: 9000;
+            left: 0;
+            right: 0;
+        }
+
+        :host(.menu-visible) .menu-items {
+            display: flex;
+            width: auto !important;
+            position: fixed;
+            top: var(--menu-header-mobile-height, 32px);
+            left: 0;
+            bottom: 0;
+            z-index: 9000;
+        }
+    }
+
+    /* Desktop only */
+    @media screen and (min-width: 800px) {
+
+        .menu-header vaadin-button.menu-open-close-button {
+            display: none;
+        }
+
+        .menu-header vaadin-button.user-button {
+            position: absolute;
+            top: unset;
+            bottom: var(--lumo-space-s, 10px);
+            height: auto !important;
+            left: 12px;
+        }
+
+        .menu-header, .menu-items {
+            min-width: 64px;
+        }
+
+        .menu-header {
+            position: static;
+        }
+
+        .menu-title{
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .menu-items {
+            display: flex;
+        }
+
+    }
+
+</style>
+....
+
+For the sake of this tutorial, we're only styling this application for Desktop and mobile, however the same approach could be used for introducing an intermediate tablet size. The icons do not render as we're using Vaadin icons which are not available in this limited preview of the UI.
+
+image::MenuDesignMobile.jpeg[]
+MenuDesign Mobile size
+
+image::MenuDesignDesktop.jpeg[]
+MenuDesign Desktop size
+
+We make sure we give id's to the components that we need to access later so that they are automatically added to the Java companion file for the design.
+
+Once we're done with our design, we can take a look at the Java companion file that was generated for us:
+
+[source,java]
+....
+@Tag("menu-design")
+@HtmlImport("menu-design.html")
+public class MenuDesign extends PolymerTemplate<MenuDesign.MenuDesignModel> {
+
+    @Id("menuButton")
+    private Button menuButton;
+    @Id("title")
+    private Element title;
+    @Id("menuItems")
+    private VerticalLayout menuItems;
+    @Id("userButton")
+    private Button userButton;
+
+
+    private static final String MENU_VISIBLE = "menu-visible";
+    private static final String MENU_SELECTED = "selected";
+
+    /**
+     * Creates a new MenuDesign.
+     */
+    public MenuDesign() {
+        // You can initialise any data required for the connected UI components here.
+    }
+
+    /**
+     * This model binds properties between MenuDesign and menu-design.html
+     */
+    public interface MenuDesignModel extends TemplateModel {
+        // Add setters and getters for template properties here.
+    }
+}
+....
+
+This is essentially where we'll hook in our navigation menu logic. As we added IDs to our components, we can see that Vaadin Designer has included references for us to use at the top of the class. But first we'll have to do our initialization code we'll start by adding the two polymer properties for our template that we added, the title and the title icon in the MenuDesignModel-interface:
+
+[source,java]
+....
+public interface MenuDesignModel extends TemplateModel {
+
+    String getTitleString();
+
+    void setTitleString(String titleString);
+
+    String getTitleIcon();
+
+    void setTitleIcon(String titleIcon);
+}
+....
+
+And then add listeners and initialize our menu through the constructor:
+
+[source,java]
+....
+public MenuDesign() {
+
+    userButton.addClickListener(e -> {
+        UI ui = UI.getCurrent();
+        ui.getPage().executeJavaScript("window.location.reload()");
+        ui.getSession().getSession().invalidate();
+    });
+    userButton.setIcon(VaadinIcon.SIGN_OUT.create());
+    userButton.setText("Logout");
+    userButton.getElement().getThemeList().add("small tertiary primary");
+
+    menuButton.addClickListener(e -> {
+        ClassList classList = getElement().getClassList();
+        if (classList.contains(MENU_VISIBLE)) {
+            classList.remove(MENU_VISIBLE);
+        } else {
+            classList.add(MENU_VISIBLE);
+        }
+    });
+
+    menuItems.setSpacing(false);
+    menuItems.setMargin(false);
+    menuItems.setPadding(false);
+    menuItems.removeAll();
+
+    getModel().setTitleString("My Crud");
+    getModel().setTitleIcon("vaadin:"+VaadinIcon.TABLE.name().toLowerCase());
+
+}
+....
+
+At this point we could already hook up the navigation menu to try it out, but before that we'll add methods for adding and views to the navigation section and clearing the previous selected view in the navigator section:
+
+[source,java]
+....
+public void addView(String name, Component icon, Object viewId, SerializableFunction<Object, Void> selectionCallback) {
+    Button menuItem = new Button(name);
+    menuItem.setIcon(icon);
+    menuItem.getElement().getClassList().add("menu-item");
+    menuItem.getElement().getClassList().add("responsive");
+    menuItem.getElement().setProperty("theme", "small");
+    menuItem.addClickListener(e -> selectionCallback.apply(viewId));
+    menuItem.addClickListener(e -> {
+        clearAllSelections();
+        e.getSource().getElement().getClassList().add(MENU_SELECTED);
+    });
+
+    //Preselect first entry
+    if (!menuItems.getChildren().filter(component -> component instanceof Button).findFirst().isPresent()) {
+       menuItem.getElement().getClassList().add(MENU_SELECTED);
+    }
+
+    menuItems.add(menuItem);
+}
+
+
+protected void clearAllSelections() {
+    menuItems.getChildren().filter(component -> component instanceof Button).forEach(button -> button.getElement().getClassList().remove(MENU_SELECTED));
+}
+....
+
+In order to start using our new menu we'll need to swap out the old menu to the new one as well as enable the new Lumo theme that comes with Vaadin 10, we can do this in the BookstoreMainLayout.java file:
+
+[source,java]
+....
+// KEEP ALL THE OTHER ANNOTATIONS, simply add the following
+@Theme(Lumo.class)
+@HtmlImport("frontend://styles/shared-styles.html")
+@StyleSheet("frontend://styles/global.css")
+public class BookstoreMainLayout extends Div {
+    ...
+}
+....
+
+In order to replicate the old application visual appearance, we'll need to add a bit of padding to the top of the HorizontalLayout that has the menu when we're in mobile mode. This element is directly in the hierarchy of the body of the DOM, so we can add a "global.css" css file for any global styles that are not part of the shadow dom of a polymer component:
+
+[source,css]
+....
+@media screen and (max-width: 799px) {
+    .has-menu {
+        padding-top: 32px;
+    }
+}
+....
+
+----
+Had we decided to do bigger refactorings on how our menu is built, we could have built this as a part of the menu, essentially have the menu-design be the root and embed our views inside it. However, since we're trying to minimize the impact on existing code we're trying to stay as close to the old implementation as possible.
+----
+
+We'll also need to add a bit of responsive behavior to our buttons in shared-styles.html (just changing the size of the text) to demonstrate the behavior and introduce how we can (to a degree) style the local DOM of polymer elements. For this, we'll add a new dom-module to the shared styles and target it for "vaadin-buttons" through the "theme-for"-property.
+
+[source,css]
+....
+<dom-module id="menu-item" theme-for="vaadin-button">
+    <template>
+        <style>
+            :host(.menu-item) div[part="label"]{
+                text-align: left;
+                width: 100%;
+            }
+
+            @media screen and (max-width: 799px) {
+                :host(.responsive){
+                    font-size: var(--lumo-font-size-xxs);
+                }
+            }
+        </style>
+    </template>
+</dom-module>
+....
+
+Finally we'll move the extra padding from the Vaadin 7 "main-screen" horizontal-layout as we're managing that now through the global styles:
+
+bookstoretheme.scss (around line 204)
+[source,css]
+....
+... (line 202)
+  .legacy-content-root[width-range~="0-800px"] {
+
+    .main-screen {
+      /*padding-top: $v-unit-size;*/  //remove padding-top for v10 hybrid
+    }
+...
+....
+
+
+image::NavV7V10Mobile.jpeg[]
+
+image::NavV7Desk.jpeg[]
+
+image::NavV10Desk.jpeg[]
+
+We do notice that the Lumo theme has a bit of a more flat look and feel than the original theme. While we could make the theme match pixel perfectly with the original theme, we are not going to emphasize theming apart from the required functionality (responsive behavior).
+
+In the next section we'll take on the inventory view and start transitioning the Table to a Grid and later the FieldGroup to a Binder.
+
+
+
+
+
+
+
+
+
+
+
+

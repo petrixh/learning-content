@@ -1,0 +1,1 @@
+In this series you'll learn how to take an existing Vaadin 7 application and slowly migrate it to Vaadin 10 leveraging MPR in order to run a hybrid application. 
