@@ -520,7 +520,7 @@ components. We will therefore start by implementing the menu and navigation part
 image::Vaadin10ConvTarget.jpg[alt=Target for this step is to convert the navigation section with Vaadin 10 while keeping the application views as Vaadin 7.,width=1200,height=571,role=imgExpand]
 
 ----
-Disclamer: We are trying to have a minimal impact on the existing code where possible, therefore we are going to replicate the existing menu structure with a similar structure instead of redesigning it. There are better ways of structuring and organizing your view hierarchy in Vaadin 10 then the following example will detail.
+Disclamer: We are trying to have a minimal impact on the existing code where possible, therefore we are going to replicate the existing menu structure with a similar structure instead of redesigning it. There are better ways of structuring and organizing your view hierarchy in Vaadin 10 than the following example will detail.
 ----
 
 We will start by creating a new MenuDesign using the designer (remember to select the "Create Java Companion file" checkbox and verify that the files are created under the right module, the ui-module) and add the required components to the design. Essentially we'll add:
